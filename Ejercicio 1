@@ -1,0 +1,109 @@
+
+!pip install pulp ortools
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import linprog
+import pulp
+from ortools.linear_solver import pywraplp
+
+# A) Solución gráfica
+
+x = np.linspace(0, 5, 400)
+
+y1 = 3 - x
+y2 = (4 - x) / 4
+y3 = x
+
+# Graficar las restricciones
+plt.plot(x, y1, label=r'$x + y \leq 3$')
+plt.plot(x, y2, label=r'$x + 4y \geq 4$')
+plt.plot(x, y3, label=r'$-x + y \leq 0$')
+
+y4 = np.minimum(y1, y3)
+plt.fill_between(x, y2, y4, where=(y2 <= y4), color='gray', alpha=0.5)
+
+# Configuración del gráfico
+plt.xlim((0, 5))
+plt.ylim((0, 5))
+plt.xlabel(r'$x$')
+plt.ylabel(r'$y$')
+plt.legend()
+plt.grid(True)
+plt.title("Grafica remington")
+plt.show()
+
+# B) SOLUCIÓN CON LINPROG
+
+c = [-1, 0] 
+# Matriz
+A = [
+    [1, 1],   
+    [-1, -4], 
+    [1, -1]  
+]
+
+b = [3, -4, 0]  
+
+# Límites 
+x_bounds = (0, None)
+y_bounds = (0, None)
+
+# Resolver el problema
+result = linprog(c, A_ub=A, b_ub=b, bounds=[x_bounds, y_bounds], method='highs')
+
+# Mostrar la solución
+print("Solución con linprog:")
+print(f"x = {result.x[0]}, y = {result.x[1]}")
+print(f"Resultado: {-result.x[0] + 24}")
+
+# C) SOLUCIÓN CON PULP
+
+# Definir el problema
+prob = pulp.LpProblem("Problema_de_Programacion_Lineal", pulp.LpMinimize)
+
+# Definir las variables
+x_pulp = pulp.LpVariable('x', lowBound=0)
+y_pulp = pulp.LpVariable('y', lowBound=0)
+
+# Definir la función objetivo
+prob += -x_pulp + 24, "Funcion_Objetivo"
+
+# Definir las restricciones
+prob += x_pulp + y_pulp <= 3, "Restriccion_1"
+prob += x_pulp + 4 * y_pulp >= 4, "Restriccion_2"
+prob += -x_pulp + y_pulp <= 0, "Restriccion_3"
+
+# Resolver el problema
+prob.solve()
+
+# Mostrar la solución
+print("\nSolución con PuLP:")
+print(f"x = {pulp.value(x_pulp)}, y = {pulp.value(y_pulp)}")
+print(f"Resuktado: {-pulp.value(x_pulp) + 24}")
+
+# D) Or tools
+
+solver = pywraplp.Solver.CreateSolver('GLOP')
+
+# Definir las variables
+x_or = solver.NumVar(0, solver.infinity(), 'x')
+y_or = solver.NumVar(0, solver.infinity(), 'y')
+
+
+solver.Minimize(-x_or + 24)
+
+
+solver.Add(x_or + y_or <= 3)
+solver.Add(x_or + 4 * y_or >= 4)
+solver.Add(-x_or + y_or <= 0)
+
+# Resolver el problema
+status = solver.Solve()
+
+#  solución
+if status == pywraplp.Solver.OPTIMAL:
+    print("\nSolución con OR-Tools:")
+    print(f"x = {x_or.solution_value()}, y = {y_or.solution_value()}")
+    print(f"Resultado: {-x_or.solution_value() + 24}")
